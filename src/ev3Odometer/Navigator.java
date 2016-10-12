@@ -1,3 +1,11 @@
+/**
+ * 
+ * Navigator which travels to all points passed in constructor
+ * 
+ * @author Elie Harfouche and Guillaume Martin-Achard
+ * @since  2016-10-10
+ */
+
 package ev3Odometer;
 
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
@@ -13,8 +21,20 @@ public class Navigator extends AbNavigator{
 	}
 	
 	@Override
-	protected void TravelTo(double[] coordinates){
+	 public void run(){
 		
+		//loop through all given waypoints and travel to them in order.
+		while(waypoints.size()>0){
+			TravelTo(waypoints.poll());
+		}
+		
+		//Once we have finished travelling, stop motors.
+		lMotor.stop();
+		rMotor.stop();
+	}
+	
+	@Override
+	protected void TravelTo(double[] coordinates){
 		isNavigating =true;
 		
 		//Set Motor speeds forward
@@ -38,13 +58,10 @@ public class Navigator extends AbNavigator{
 				vectorTheta+=Math.PI*2;
 			}
 			
-			//Calculate the current error of our angle compared to the expected angle
-			double smallestAngleToExpectd =getSmallestRotation(currentHeading,vectorTheta);
-			double rotationError = Math.abs(smallestAngleToExpectd);//Math.abs(vectorTheta-currentHeading);
+			double rotationError = Math.abs(getSmallestRotation(currentHeading,vectorTheta));
 			
-			//If we are not within our threshhold of error, rotate the robot to the correct angle
 			if(rotationError>ANGLE_ERROR_THRESHHOLD){
-				TurnToAngle(smallestAngleToExpectd);
+				TurnToAngle(getSmallestRotation(currentHeading,vectorTheta));
 			}
 			
 			//If we have passed all the checks, then we are facing no obstacles and in a direct line to the wall
@@ -81,6 +98,8 @@ public class Navigator extends AbNavigator{
 		isNavigating=false;
 		
 	}
-	
+
 
 }
+
+

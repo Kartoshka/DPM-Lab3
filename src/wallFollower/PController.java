@@ -16,7 +16,7 @@ public class PController implements UltrasonicController {
 	
 	public static final int SINTERVAL=100;		// A 10Hz sampling rate
 	public static final double PROPCONST=10.0;	// Proportionality constant
-	//public static final int bandCenter=30; 		// Distance to wall * 1.4 (cm)
+	//public static final int bandCenter=30; 	// Distance to wall * 1.4 (cm)
 	public static final int MAXDIST = 200;
 	
 	public static final int FWDSPEED=200;		// Forward speed (deg/sec)

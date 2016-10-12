@@ -14,7 +14,6 @@ package ev3Odometer;
 
 import java.util.LinkedList;
 import java.util.Queue;
-
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
 public abstract class AbNavigator extends Thread{
@@ -74,23 +73,10 @@ public abstract class AbNavigator extends Thread{
 		currentPos[0] = odometer.getX();
 		currentPos[1] = odometer.getY();
 		//Queue up waypoints to travel to 
+		
 		for(double[] coords:destinations){
 			waypoints.add(coords);
 		}
-		
-	}
-	
-	@Override
-	 public void run(){
-		
-		//loop through all given waypoints and travel to them in order.
-		while(waypoints.size()>0){
-			TravelTo(waypoints.poll());
-		}
-		
-		//Once we have finished travelling, stop motors.
-		lMotor.stop();
-		rMotor.stop();
 	}
 	
 	/**
@@ -100,7 +86,7 @@ public abstract class AbNavigator extends Thread{
 	protected abstract void TravelTo(double[] coordinates);
 	
 	/**
-	 * Verify whether robot is currently in motion.
+	 * Verify whether robot is currently in motion. NOTE: Not used in navigator code because other flags were used.
 	 * @return whether robot is in motion
 	 */
 	public boolean isNavigating(){
@@ -117,7 +103,7 @@ public abstract class AbNavigator extends Thread{
 		isRotating=true;
 		
 		//Convert angle to radians
-		theta = Math.toRadians(theta);
+		theta = theta*180/Math.PI;
 		
 		//Set motor speeds to rotation speeds	
 		lMotor.setSpeed(ROTATE_SPEED);
@@ -193,5 +179,5 @@ public abstract class AbNavigator extends Thread{
 		rMotor.forward();
 	}
 	
-	
 }
+

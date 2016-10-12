@@ -1,4 +1,10 @@
-
+/**
+ * 
+ * Lab3 navigation and wall avoidance
+ * 
+ * @author Elie Harfouche and Guillaume Martin-Achard
+ * @since  2016-10-10
+ */
 package ev3Odometer;
 
 import lejos.hardware.Button;
@@ -21,36 +27,37 @@ public class Lab3 {
 	
 	public static void main(String[] args) {
 		
+		//Initialize display on EV3
 		final TextLCD t = LocalEV3.get().getTextLCD();
 
+		//Initialize odometer and odometer display
 		Odometer odometer = new Odometer(leftMotor, rightMotor,WHEEL_RADIUS,TRACK);
 		OdometryDisplay odometryDisplay = new OdometryDisplay(odometer,t);
 		
+		//Initialize ultrasonic sensor
 		EV3UltrasonicSensor usSensor = new EV3UltrasonicSensor(LocalEV3.get().getPort("S1"));
-				
+			
+		
+		//Initialize both navigators and pass them their specific path
 		AbNavigator regNavi = new Navigator(leftMotor,rightMotor,odometer,WHEEL_RADIUS,WHEEL_RADIUS,TRACK,waypointsPartA);
 		AbNavigator avoidNavigator = new NavigatorAvoidance(leftMotor,rightMotor,odometer,WHEEL_RADIUS,
 				WHEEL_RADIUS,TRACK,waypointsPartB,usSensor,usMotor);
-		//OdometryCorrection odometryCorrection = new OdometryCorrection(odometer); 
 	
-		do {
-			t.clear();
-			
+		do {			
 			
 			// clear the display
 			t.clear();
 
 			// ask the user whether the motors should drive in a square or float
-			t.drawString("< Left    | Right >", 0, 0);
-			t.drawString("          |        ", 0, 1);
-			t.drawString("Regular   | Drive  ", 0, 2);
-			t.drawString("Navigator | in a   ", 0, 3);
-			t.drawString("          | square ", 0, 4);
+			t.drawString("< Left    | Right >   ", 0, 0);
+			t.drawString("          |           ", 0, 1);
+			t.drawString("Regular   | Avoidance ", 0, 2);
+			t.drawString("Navigator | Navigator ", 0, 3);
 						
 			int choice  = Button.waitForAnyPress();
 			
 			
-			
+			//Regular navigation
 			if(choice==Button.ID_LEFT)
 			{
 				odometer.start();
@@ -58,20 +65,13 @@ public class Lab3 {
 				regNavi.start();
 				
 			}
+			//Avoidance navigation
 			else if(choice==Button.ID_RIGHT)
 			{
 				odometer.start();
 				odometryDisplay.start();
 				avoidNavigator.start();
 			}
-			
-			
-
-			(new Thread() {
-				public void run () {
-
-				}
-			}).start();
 		}
 		
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);

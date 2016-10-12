@@ -1,6 +1,15 @@
+/**
+ * 
+ * Navigator which avoids obstacles on the way.
+ * uses the ultrasonic sensor to detect a wall then enables BANGBANG wall-follower to avoid wall until it clears it.
+ * 
+ * @author Elie Harfouche and Guillaume Martin-Achard
+ * @since  2016-10-10
+ */
 package ev3Odometer;
 
 
+import wallFollower.BangBangController;
 import wallFollower.UltrasonicController;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
@@ -9,16 +18,19 @@ import lejos.robotics.SampleProvider;
 public class NavigatorAvoidance extends AbNavigator {
 
 	//Distance at which to detect obstacle
-	private static final float WALL_DETECTION_DISTANCE =12;
+	private static final float WALL_DETECTION_DISTANCE =10;
 	//Angle at which to rotate ultrasonic sensor once in wall avoidance mode
-	private static final int US_SENSOR_BEHIND_ANGLE = 75;
-
-
-	//Angle of ultra sonic sensor when in navigation mode
-	private static final int FRONT_ANGLE_US_MOTOR =30;
+	private static final int US_SENSOR_BEHIND_ANGLE = -75;
 	
-	//Interval in which robot will accept that it is facing right direction when in obstacle avoidance mode
-	private static final double AVOIDANCE_ACCEPTED_ANGLE_ERROR = Math.toRadians(15);
+	//Angle of ultra sonic sensor when in navigation mode
+	private static final int US_MOTOR_FRONT_ANGLE =0;
+	
+	//Interval in which robot will accept that it is facing the pre-avoidance direction when in obstacle avoidance mode
+	private static final double AVOIDANCE_ACCEPTED_FIRST_ANGLE_ERROR = Math.toRadians(15);
+	
+	//Interval in which robot will accept that it is facing 90 degrees to the pre-avoidance direction when in obstacle avoidance mode
+	private static final double AVOIDANCE_ACCEPTED_SECOND_ANGLE_ERROR = Math.toRadians(45);
+	
 	//Minimum amount of distance for robot to detect it has turned corner during wall avoidance
 	private static final double AVOIDANCE_ACCEPTED_WALL_DISTANCE = 50;
 	
@@ -39,18 +51,39 @@ public class NavigatorAvoidance extends AbNavigator {
 	public NavigatorAvoidance(EV3LargeRegulatedMotor lMotor, EV3LargeRegulatedMotor rMotor,Odometer odometer,double leftRadius, 
 			double rightRadius, double width, double[][] destinations,EV3UltrasonicSensor usSensor,EV3LargeRegulatedMotor usMotor)
 	{
+		//Call super constructor
 		super(lMotor,rMotor,odometer,leftRadius,rightRadius,width,destinations);
+
+		//Intialize controller
+		this.wallFollower = new BangBangController(lMotor,rMotor,(int)WALL_DETECTION_DISTANCE,3);
 		
+		//Intialize sampling from ultra sonic sensor
 		usSampler = usSensor.getMode("Distance");
 		usData = new float[usSensor.sampleSize()];
 		this.usMotor = usMotor;
-		
-		this.usMotor.rotateTo(FRONT_ANGLE_US_MOTOR);
+		//Set orientation of ultrasonic sensor
+		this.usMotor.rotateTo(US_MOTOR_FRONT_ANGLE);
 		
 	}
 	
 	@Override
+	 public void run(){
+		
+		//loop through all given waypoints and travel to them in order.
+		while(waypoints.size()>0){
+			TravelTo(waypoints.poll());
+		}
+		
+		//Once we have finished travelling, stop motors.
+		lMotor.stop();
+		rMotor.stop();
+	}
+	
+	
+	@Override
 	protected void TravelTo(double[] coordinates){
+		//flag used to determine when to properly return to navigation mode
+		boolean clearedFirstCorner =false;
 		
 		//Flag that we are currently in transit
 		isNavigating =true;
@@ -83,20 +116,20 @@ public class NavigatorAvoidance extends AbNavigator {
 				
 				//Calculate the error between our current angle and the angle we were at before wall avoidance turned on
 				double errorAngle = Math.abs(getSmallestRotation(currentHeading,thetaBeforeWall));//Math.abs(currentHeading-thetaBeforeWall);
-				
-				
-				//If we detect that the distance reported by the ultra sonic sensor is greater than the set threshhold (that is, we cleared a corner) 
-				//and our current angle is within an acceptable range of our angle before wall avoidance (that is, we are facing the destination)
-				// revert back to the navigation mode
-				if(((int)(usData[0]*100.0)>=AVOIDANCE_ACCEPTED_WALL_DISTANCE && errorAngle<=(AVOIDANCE_ACCEPTED_ANGLE_ERROR)))
-				{
-					lMotor.setSpeed(0);
-					rMotor.setSpeed(0);
-					lMotor.forward();
-					rMotor.forward();
-					
+								
+				 //If we have cleared the first angle, and our angle relative to our pre-wall-avoidance angle is within 90degrees, we may return to navigation
+				if(clearedFirstCorner && (errorAngle>AVOIDANCE_ACCEPTED_SECOND_ANGLE_ERROR)){
+					clearedFirstCorner = false;
+					haltMotors();
+
 					avoidWall=false;
-					usMotor.rotateTo(30);
+					usMotor.rotateTo(US_MOTOR_FRONT_ANGLE);
+				}
+				//If we detect that the distance reported by the ultra sonic sensor is greater than the set threshhold (that is, we cleared a corner) 
+				else if(((int)(usData[0]*100.0)>=AVOIDANCE_ACCEPTED_WALL_DISTANCE && errorAngle<=(AVOIDANCE_ACCEPTED_FIRST_ANGLE_ERROR)))
+				{
+					//Detect that we've cleared the first corner
+					clearedFirstCorner = true;
 				}
 				//Otherwise, notify the wall-follower and pass execution to that thread. 
 				else{
@@ -138,7 +171,7 @@ public class NavigatorAvoidance extends AbNavigator {
 					rMotor.forward();
 					
 					//Rotate ultraSonic sensor to face to our side so that we can detect the wall
-					usMotor.rotateTo(-US_SENSOR_BEHIND_ANGLE);
+					usMotor.rotateTo(US_SENSOR_BEHIND_ANGLE);
 					
 					//Turn robot to face away from wall
 					TurnToAngle(ROBOT_TURN_BY);
